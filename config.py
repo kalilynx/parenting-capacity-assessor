@@ -1,25 +1,34 @@
 """Configuration loader. Reads from .env, exposes typed constants."""
-from pathlib import Path
-from dotenv import load_dotenv
+from __future__ import annotations
+
 import os
+from pathlib import Path
+
+from dotenv import load_dotenv
 
 load_dotenv()
 
-# ── Paths ────────────────────────────────────────────────────
-BASE_DIR = Path(__file__).parent
-DATA_DIR = BASE_DIR / "data"
-KNOWLEDGE_DIR = DATA_DIR / "knowledge"
-REPORTS_DIR = DATA_DIR / "reports"
-SKILL_DOC_DIR = DATA_DIR / "skill_doc"
-UPLOADS_DIR = BASE_DIR / "uploads"
+BASE_DIR = Path(__file__).resolve().parent
+DATA_DIR = Path(os.getenv("DATA_DIR", str(BASE_DIR / "data")))
+KNOWLEDGE_DIR = Path(os.getenv("KNOWLEDGE_DIR", str(DATA_DIR / "knowledge")))
+REPORTS_DIR = Path(os.getenv("REPORTS_DIR", str(DATA_DIR / "reports")))
+SKILL_DOC_DIR = Path(os.getenv("SKILL_DOC_DIR", str(DATA_DIR / "skill_doc")))
+UPLOADS_DIR = Path(os.getenv("UPLOADS_DIR", str(BASE_DIR / "uploads")))
 
 for _d in (DATA_DIR, KNOWLEDGE_DIR, REPORTS_DIR, SKILL_DOC_DIR, UPLOADS_DIR):
     _d.mkdir(parents=True, exist_ok=True)
 
+HF_HOME = Path(os.getenv("HF_HOME", str(BASE_DIR / ".hf_cache")))
+HF_HOME.mkdir(parents=True, exist_ok=True)
+os.environ.setdefault("HF_HOME", str(HF_HOME))
+
 # ── LLM ──────────────────────────────────────────────────────
-LLM_PROVIDER = os.getenv("LLM_PROVIDER", "ollama").lower()
+LLM_PROVIDER = os.getenv("LLM_PROVIDER", "openai" if os.getenv("OPENAI_API_KEY") else "ollama").lower()
 OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "llama3.1:8b")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+OPENAI_BASE_URL = os.getenv("OPENAI_BASE_URL")
+OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
 TEMP_REPORT = float(os.getenv("LLM_TEMPERATURE_REPORT", "0.25"))
 TEMP_CHAT = float(os.getenv("LLM_TEMPERATURE_CHAT", "0.6"))
 

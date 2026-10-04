@@ -1,20 +1,21 @@
 """Core agent — chat intake + report generation."""
 from __future__ import annotations
 
-from typing import List, Dict, Optional
+from typing import Dict, List, Optional
 
 from langchain_community.chat_models import ChatOllama
-from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
+from langchain_openai import ChatOpenAI
 
 import config
-from prompts import (
-    PERSONA_PROMPT,
-    INTAKE_PROMPT,
-    section_prompt,
-    QUALITY_CHECK_PROMPT,
-    FOLLOWUP_PROMPT,
-)
 from knowledge_base import KnowledgeBase
+from prompts import (
+    FOLLOWUP_PROMPT,
+    INTAKE_PROMPT,
+    PERSONA_PROMPT,
+    QUALITY_CHECK_PROMPT,
+    section_prompt,
+)
 
 
 class Agent:
@@ -22,21 +23,37 @@ class Agent:
 
     def __init__(self, kb: Optional[KnowledgeBase] = None):
         self.kb = kb or KnowledgeBase()
-        self.llm_report = ChatOllama(
-            base_url=config.OLLAMA_BASE_URL,
-            model=config.OLLAMA_MODEL,
-            temperature=config.TEMP_REPORT,
-        )
-        self.llm_chat = ChatOllama(
-            base_url=config.OLLAMA_BASE_URL,
-            model=config.OLLAMA_MODEL,
-            temperature=config.TEMP_CHAT,
-        )
+
+        if config.LLM_PROVIDER == "openai":
+            self.llm_report = ChatOpenAI(
+                model=config.OPENAI_MODEL,
+                temperature=config.TEMP_REPORT,
+                api_key=config.OPENAI_API_KEY,
+                base_url=config.OPENAI_BASE_URL,
+            )
+            self.llm_chat = ChatOpenAI(
+                model=config.OPENAI_MODEL,
+                temperature=config.TEMP_CHAT,
+                api_key=config.OPENAI_API_KEY,
+                base_url=config.OPENAI_BASE_URL,
+            )
+        else:
+            self.llm_report = ChatOllama(
+                base_url=config.OLLAMA_BASE_URL,
+                model=config.OLLAMA_MODEL,
+                temperature=config.TEMP_REPORT,
+            )
+            self.llm_chat = ChatOllama(
+                base_url=config.OLLAMA_BASE_URL,
+                model=config.OLLAMA_MODEL,
+                temperature=config.TEMP_CHAT,
+            )
 
     def check_connection(self) -> Dict[str, object]:
         try:
+            model_name = config.OPENAI_MODEL if config.LLM_PROVIDER == "openai" else config.OLLAMA_MODEL
             resp = self.llm_report.invoke([HumanMessage(content="Reply with the single word OK.")])
-            return {"ok": True, "model": config.OLLAMA_MODEL, "sample": resp.content.strip()[:40]}
+            return {"ok": True, "model": model_name, "sample": resp.content.strip()[:40]}
         except Exception as e:
             return {"ok": False, "error": str(e)[:300]}
 
